@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name_overseas">海外应用</string>
+    <string name="app_name_china">国内应用</string>
+    <string name="app_name_dev">调试应用</string>
+    <string name="test_report_leak">上报泄漏</string>
+
+</resources>

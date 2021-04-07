@@ -1,0 +1,196 @@
+buildscript {
+    ext.kotlin_version = '1.3.31'
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.2.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle_back files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
+apply plugin: 'com.android.application'
+
+apply plugin: 'kotlin-android'
+
+apply plugin: 'kotlin-android-extensions'
+
+android {
+    compileSdkVersion 30
+    signingConfigs {
+        devConfig {
+            keyAlias 'mulit'
+            keyPassword '123456'
+            storeFile file('MultiTest.jks')
+            storePassword '123456'
+        }
+        chinaConfig {
+            keyAlias 'mulit'
+            keyPassword '123456'
+            storeFile file('MultiTest.jks')
+            storePassword '123456'
+        }
+        overseasConfig {
+            keyAlias 'mulit'
+            keyPassword '123456'
+            storeFile file('MultiTest.jks')
+            storePassword '123456'
+        }
+    }
+    defaultConfig {
+        applicationId "com.data.multichanneldemo"
+        minSdkVersion 26
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.0"
+        flavorDimensions "country","version"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // 多渠道/多环境 的不同配置
+    productFlavors {
+        version26{
+            versionCode 1
+            versionName "1.0"
+            minSdkVersion 24
+            targetSdkVersion 26
+            buildConfigField "String","FLAVOR_NAME","\"version26\""
+            dimension "version"
+        }
+        version30{
+            versionCode 2
+            versionName "1.1"
+            minSdkVersion 26
+            targetSdkVersion 30
+            buildConfigField "String","FLAVOR_NAME","\"version30\""
+            dimension "version"
+        }
+        china{
+            applicationId "com.data.multichanneldemo.china"
+            resValue "string", "app_name", "@string/app_name_china"
+            manifestPlaceholders = [TEST_CHANNEL_VALUE: "china",
+                                    app_icon           : "@drawable/ic_china_logo"]
+            buildConfigField "String","FLAVOR_NAME","\"china\""
+            dimension "country"
+            signingConfig signingConfigs.chinaConfig
+        }
+        overseas{
+            applicationId "com.data.multichanneldemo.overseas"
+            resValue "string", "app_name", "@string/app_name_overseas"
+            manifestPlaceholders = [TEST_CHANNEL_VALUE: "overseas",
+                                    app_icon           : "@drawable/ic_overseas_logo"]
+            buildConfigField "String","FLAVOR_NAME","\"overseas\""
+            dimension "country"
+            signingConfig signingConfigs.overseasConfig
+        }
+    }
+
+    sourceSets {
+        main {
+            java.srcDir './app/src/main/java'
+            res.srcDirs './app/src/main/res'
+            manifest.srcFile '/app/src/main/AndroidManifest_common.xml'
+        }
+        debug{
+            java.srcDir './debug_src/'
+            manifest.srcFile './debug_src/AndroidManifest.xml'
+        }
+        release{
+            java.srcDir './release_src/'
+        }
+        china {
+            java.srcDirs = ['/chinalibrary/src/main/']
+            res.srcDirs './chinalibrary/src/main/res'
+            manifest.srcFile '/chinalibrary/src/main/AndroidManifest.xml'
+        }
+        overseas{
+            java.srcDirs = ['/oversealibrary/src/main/java']
+            res.srcDirs './oversealibrary/src/main/res'
+            manifest.srcFile '/oversealibrary/src/main/AndroidManifest.xml'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
+        // Or, if you prefer, you can continue to check for errors in release builds,
+        // but continue the build even when errors are found:
+        abortOnError false
+    }
+    compileOptions {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+
+    //重命名
+    android.applicationVariants.all { variant ->
+        variant.outputs.all {
+            //时间
+            def date = time()
+            //模块名
+            def flav_name = MODEL_NAME+"_"
+            //渠道不为空
+            if(variant.productFlavors[0] != null){
+                //+渠道
+                flav_name += "${variant.productFlavors[0].name}_"
+            }
+            //模块名+渠道+relase/debug+特殊字段+版本号+日期.apk
+            outputFileName = flav_name+"${variant.buildType.name}${OTHER_NAME}_v${versionName}_${date}.apk"
+        }
+    }
+    //koom lib配置
+    packagingOptions {
+        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
+        pickFirst 'lib/x86_64/libc++_shared.so'
+        pickFirst 'lib/x86/libc++_shared.so'
+    }
+}
+
+static def time() {
+    return new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC"))
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.2'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test:runner:1.1.0-alpha3'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0-alpha3'
+
+    //debug模式时工具编入项目
+    debugImplementation 'com.squareup.leakcanary:leakcanary-android:1.6.3'
+    releaseImplementation 'com.squareup.leakcanary:leakcanary-android-no-op:1.6.3'
+
+    //koom
+    debugImplementation 'com.kwai.koom:java-oom:1.1.0'
+
+    //blockcanary
+    debugImplementation 'com.github.markzhai:blockcanary-android:1.5.0'
+    releaseImplementation 'com.github.markzhai:blockcanary-no-op:1.5.0'
+}
+
+//配置参数
+ext {
+    MODEL_NAME = "multi"
+    OTHER_NAME = ""
+}
